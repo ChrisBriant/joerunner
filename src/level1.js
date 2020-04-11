@@ -9,11 +9,12 @@ export default new Phaser.Class({
 
     preload: function () {
         // map made with Tiled in JSON format
-        this.load.tilemapTiledJSON('map', 'assets/runner.json');
+        this.load.tilemapTiledJSON('map', 'assets/runner2.json');
         // tiles in spritesheet
         this.load.spritesheet('joerunnertileset', 'assets/joerunnertileset.png', {frameWidth: 30, frameHeight: 30});
         // player animations
         this.load.atlas('player', 'assets/player.png', 'assets/player.json');
+        this.load.atlas('gem', 'assets/diamondsheet.png', 'assets/diamond.json');
     },
 
    create: function() {
@@ -52,6 +53,7 @@ export default new Phaser.Class({
       // player will collide with the level tiles
       this.physics.add.collider(this.platformLayer, this.player,this.land,null,this);
 
+      //this.physics.add.collider(this.player, this.gemgroup,null,this);
       // when the player overlaps with a tile with index 17, collectCoin
       // will be called
 
@@ -110,6 +112,32 @@ export default new Phaser.Class({
           //this.player.body.setVelocityY(-500);
 
       }, this );
+
+      //Load Gems
+
+      var gems = this.map.getObjectLayer('gems')['objects'];
+      this.gemgroup = this.physics.add.group();
+      this.physics.add.collider(this.platformLayer, this.gemgroup);
+
+      // Gems
+      gems.forEach(gem => {
+        //Add sprite
+        console.log(gem.y)
+        this.gemgroup.create(gem.x, gem.y-20, 'gem');
+      });
+      this.gemgroup.setVelocityY(-20);
+      this.gemgroup.setVelocityX(10);
+      console.log(this.gemgroup);
+
+      // gem animation
+      this.anims.create({
+           key: 'gem',
+           frames: this.anims.generateFrameNames('gem', {prefix: 'diamond ', suffix: '.aseprite', start: 0, end: 12}),
+           frameRate: 10,
+           repeat: -1
+       });
+       this.gemgroup.playAnimation('gem');
+       //this.anims.play('gem');
 
       /*
       this.player.on('animationcomplete', function (anim, frame) {
@@ -185,7 +213,9 @@ export default new Phaser.Class({
             //this.player.once('animationcomplete',function () {this.player.body.setVelocityX(0);}, this );
             if(!this.jumping) {
               this.player.body.setVelocityX(0);
+              //Doesn't allow the jump part of the animation to run when this played
               this.player.anims.play('idle', true);
+              //this.player.anims.play('idle', true);
             }
             //this.player.anims.stop(null,true);
             //
