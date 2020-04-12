@@ -20,6 +20,7 @@ export default new Phaser.Class({
    create: function() {
       this.gallopCount = 0;
       this.jumping = false;
+      this.speedLevel = 0;
 
       // load the map
       this.map = this.make.tilemap({key: 'map'});
@@ -104,7 +105,7 @@ export default new Phaser.Class({
       this.player.on('animationcomplete',function () {
           if(this.player.anims.currentAnim.key == 'jump' && !this.jumping) {
             this.jumping = true;
-            this.player.setVelocityY(-300);
+            this.player.setVelocityY(-360);
             //alert(this.player.anims.currentAnim.key);
           } else if (this.player.anims.currentAnim.key == 'land' && this.jumping){
             this.jumping = false;
@@ -118,6 +119,8 @@ export default new Phaser.Class({
       var gems = this.map.getObjectLayer('gems')['objects'];
       this.gemgroup = this.physics.add.group();
       this.physics.add.collider(this.platformLayer, this.gemgroup);
+      //this.physics.add.collider(this.player, this.gemgroup);
+      this.physics.add.overlap(this.player, this.gemgroup, this.collectGem, null, this);
 
       // Gems
       gems.forEach(gem => {
@@ -125,8 +128,6 @@ export default new Phaser.Class({
         console.log(gem.y)
         this.gemgroup.create(gem.x, gem.y-20, 'gem');
       });
-      this.gemgroup.setVelocityY(-20);
-      this.gemgroup.setVelocityX(10);
       console.log(this.gemgroup);
 
       // gem animation
@@ -173,8 +174,16 @@ export default new Phaser.Class({
           fontSize: '20px',
           fill: '#ffffff'
       });
-      // fix the text to the camera
       this.text.setScrollFactor(0);
+
+      this.speed = this.add.text(60, 60, '0', {
+          fontSize: '60px',
+          fill: '#000000'
+      });
+      // fix the text to the camera
+      this.speed.setScrollFactor(0);
+
+      console.log(this.player);
   },
 
   // this function will be called when the player touches a coin
@@ -183,6 +192,9 @@ export default new Phaser.Class({
   },
 
   update: function(time, delta) {
+      //Update the display with the new velocity
+      this.speed.setText(this.player.body.velocity.x);
+
       if(!this.player.body.onFloor()) {
         this.jumping = true;
       }
@@ -196,12 +208,12 @@ export default new Phaser.Class({
       if (this.cursors.right.isDown)
       {
           if(this.gallopCount >= 20) {
-            this.player.body.setVelocityX(300);
+            this.player.body.setVelocityX(300 + 60*this.speedLevel);
             this.player.anims.play('gallop', true);
             this.player.flipX = false;
           } else {
             this.gallopCount++;
-            this.player.body.setVelocityX(200);
+            this.player.body.setVelocityX(200 + 60*this.speedLevel);
             this.player.anims.play('walk', true);
             this.player.flipX = false; // use the original sprite looking to the right
           }
@@ -255,12 +267,12 @@ export default new Phaser.Class({
 
   },
 
-  render: function() {
-
-      // Sprite debug info
-      game.debug.spriteInfo(spidergroup, 32, 32);
-
-  },
+  collectGem: function (player,gem) {
+      gem.disableBody(true, true);
+      if(this.speedLevel < 3) {
+        this.speedLevel++;
+      }
+  }
 
 
 });
