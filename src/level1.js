@@ -15,12 +15,20 @@ export default new Phaser.Class({
         // player animations
         this.load.atlas('player', 'assets/player.png', 'assets/player.json');
         this.load.atlas('gem', 'assets/diamondsheet.png', 'assets/diamond.json');
+        this.load.atlas('joe', 'assets/joetowler.png', 'assets/joetowler.json');
+
+        //Load guage
+        this.load.image('guage0', 'assets/guage0.png');
+        this.load.image('guage1', 'assets/guage1.png');
+        this.load.image('guage2', 'assets/guage2.png');
+        this.load.image('guage3', 'assets/guage3.png');
     },
 
    create: function() {
       this.gallopCount = 0;
       this.jumping = false;
       this.speedLevel = 0;
+      this.speedTimer = 0;
 
       // load the map
       this.map = this.make.tilemap({key: 'map'});
@@ -30,13 +38,11 @@ export default new Phaser.Class({
 
       //world layer
       this.worldLayer = this.map.createDynamicLayer('bg', levelTiles, 0, 0);
-      console.log(this.worldLayer);
       // create the platforms layer
       this.platformLayer = this.map.createDynamicLayer('platforms', levelTiles, 0, 0);
       // the player will collide with this layer
       this.platformLayer.setCollisionByExclusion([-1]);
 
-      //console.log(this.platformLayer);
 
       // set the boundaries of our game world
       this.physics.world.bounds.width = this.worldLayer.width;
@@ -53,6 +59,30 @@ export default new Phaser.Class({
 
       // player will collide with the level tiles
       this.physics.add.collider(this.platformLayer, this.player,this.land,null,this);
+
+
+      // create the joe towler sprite
+      this.joe = this.physics.add.sprite(32, 552, 'joe',0);
+      //this.player.setBounce(0.2); // our player will bounce from items
+      this.joe.setCollideWorldBounds(true); // don't go out of the map
+
+
+      // small fix to our player images, we resize the physics body object slightly
+      this.joe.body.setSize(this.joe.width, this.joe.height);
+      this.joe.setVelocityX(0);
+      //Control when Joe starts
+      this.joestarted = false;
+
+      this.anims.create({
+          key: 'joewalk',
+          frames: this.anims.generateFrameNames('joe', {prefix: 'joetowler ',suffix: '.aseprite', start: 0, end: 22}),
+          frameRate: 10,
+          repeat: -1
+      });
+      this.joe.anims.play('joewalk');
+
+
+      this.physics.add.collider(this.platformLayer, this.joe);
 
       //this.physics.add.collider(this.player, this.gemgroup,null,this);
       // when the player overlaps with a tile with index 17, collectCoin
@@ -125,10 +155,8 @@ export default new Phaser.Class({
       // Gems
       gems.forEach(gem => {
         //Add sprite
-        console.log(gem.y)
         this.gemgroup.create(gem.x, gem.y-20, 'gem');
       });
-      console.log(this.gemgroup);
 
       // gem animation
       this.anims.create({
@@ -138,26 +166,14 @@ export default new Phaser.Class({
            repeat: -1
        });
        this.gemgroup.playAnimation('gem');
-       //this.anims.play('gem');
 
-      /*
-      this.player.on('animationcomplete', function (anim, frame) {
-        this.emit('animationcomplete_' + anim.key, anim, frame);
-      }, this.player);
-
-      this.player.on('animationcomplete_jump', function () {alert("Jump"); return false;},this.player, true);
-      */
-
-
-      // idle with only one frame, so repeat is not neaded
-      /*
-      this.anims.create({
-          key: 'idle',
-          frames: [{key: 'bof', frame: 'sprite_0'}],
-          frameRate: 10,
-      });
-      */
-
+       /*
+       this.timer = this.time.addEvent({
+          delay: 500,
+          callback: this.slowPlayer,
+          callbackScope: this,
+          loop: true
+        });*/
 
       this.cursors = this.input.keyboard.createCursorKeys();
 
@@ -176,14 +192,17 @@ export default new Phaser.Class({
       });
       this.text.setScrollFactor(0);
 
-      this.speed = this.add.text(60, 60, '0', {
+      /*
+      this.speed = this.add.text(100, 100, '0', {
           fontSize: '60px',
-          fill: '#000000'
-      });
+          fill: '#000000',
+          alpha: 1
+      });*/
       // fix the text to the camera
-      this.speed.setScrollFactor(0);
+      //this.speed.setScrollFactor(0);
 
-      console.log(this.player);
+      this.guage = this.add.image(120, 60, 'guage0');
+      this.guage.setScrollFactor(0);
   },
 
   // this function will be called when the player touches a coin
@@ -193,7 +212,17 @@ export default new Phaser.Class({
 
   update: function(time, delta) {
       //Update the display with the new velocity
-      this.speed.setText(this.player.body.velocity.x);
+      //this.speed.setText(this.player.body.velocity.x);
+
+      this.guage.setTexture('guage'+this.speedLevel);
+      //Check timer and reduce speed level if 0
+      if(this.speedTimer <=0) {
+        if(this.speedLevel > 0) {
+          this.speedLevel--;
+        }
+      } else {
+        this.speedTimer--;
+      }
 
       if(!this.player.body.onFloor()) {
         this.jumping = true;
@@ -207,6 +236,12 @@ export default new Phaser.Class({
       }*/
       if (this.cursors.right.isDown)
       {
+          //Start joe running, if he isn't already
+          if(!this.joestarted) {
+            this.joe.setVelocityX(310);
+            this.joestarted = true;
+          }
+
           if(this.gallopCount >= 20) {
             this.player.body.setVelocityX(300 + 60*this.speedLevel);
             this.player.anims.play('gallop', true);
@@ -236,25 +271,7 @@ export default new Phaser.Class({
       // jump
       if (this.cursors.up.isDown && this.player.body.onFloor())
       {
-
-        //this.player.once('animationcomplete', function () {
-          this.player.anims.play('jump', true);
-          /*
-          this.player.once('animationcomplete',function () {
-              this.player.body.setVelocityY(-500);
-              alert(this.player.anims.currentAnim.key);
-          }, this );
-          */
-        //}, this);
-        console.log(this.anims);
-        //this.player.body.setVelocityY(-500);
-        /*
-        this.time.addEvent({
-          delay: 500, // in ms
-          callback: () => {
-            this.player.body.setVelocityY(-500);
-          }
-        });*/
+        this.player.anims.play('jump', true);
       }
 
 
@@ -269,9 +286,19 @@ export default new Phaser.Class({
 
   collectGem: function (player,gem) {
       gem.disableBody(true, true);
+      //Reset the speed timer so that the player gets more time at speed
+      this.speedTimer = 30;
       if(this.speedLevel < 3) {
         this.speedLevel++;
       }
+  },
+
+  //Slow down the player
+  slowPlayer: function () {
+    console.log(this.timer.getProgress());
+    if(this.speedLevel > 0) {
+      this.speedLevel--;
+    }
   }
 
 
